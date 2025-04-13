@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Marp to Google Slides</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+   body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Note Sans JP', 'Noto Sans JP', 'Segoe UI', sans-serif;
+      background-color: #f2f2f2;
+    }
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+	-webkit-overflow-scrolling: ; /* iOSの慣性スクロール対策 */
+  overscroll-behavior-y: none;       /* スクロール突き抜け防止 */
+}
+
+    textarea { width: 100%; height: 250px; font-size: 1em; box-sizing: 
+			border-box;
+		  margin-top: 1px; /* fixedの高さ+α */
+		}
+		button {
+  width: 240px;
+  height: 50px;
+  padding: 0;
+  font-size: 1rem;
+  background-color: #1c1440;
+  color: white;
+  border: none;
+	border-radius: 25px; /*（大きめでやわらかい印象） */
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* 初期状態：スマホでは中央 */
+  margin: 20px auto 10px auto;
+}
+
+/* PCサイズ以上（例えば幅768px以上）では左寄せ */
+@media (min-width: 768px) {
+  button {
+    margin-left: 0;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .option {
+    width: 64px;         /* 通常80px → やや狭めに */
+    font-size: 0.75rem;  /* 文字もやや小さく */
+    padding: 3px 0;
+  }
+
+  .option input[type="radio"]:checked + span {
+    min-width: 64px;     /* チェック時の選択スタイルにも同じ幅を */
+  }
+}
+.option span {
+	height:20px;
+  display: inline-block;
+  min-width: 80px;
+  padding: 8px 0;
+  border-radius: 10px;
+  text-align: center;
+  background-color: #fff;
+  color: #1c1440;
+  border: none;
+	box-shadow: 0 0 1px rgba(0,0,0,0.1); /* ごく薄く */
+	transition: background-color 0.3s, color 0.3s;
+}
+
+.color-preview {
+  display: flex;
+  flex-direction: column; 
+  align-items: center;
+  margin-bottom: 2px; /* スライダーとの間に少し余白 */
+}
+
+
+button:hover {
+  background-color: #1c1440;;  /* ← ホバー時にさらに黒く */
+  border-color: #130e2d;;
+}
+
+.slider-container {
+  display: flex;
+  flex-direction: column; /* ← これが必要 */
+  align-items: center;
+  gap: 0px;
+}
+
+
+    label { margin-right: 5px; }
+    .flex-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .slider-container input[type=range] { width: 150px; }
+    .color-preview { display: flex; flex-direction: column; align-items: center; }
+    .font-sample { font-size: 0.9em; margin-left: 5px; font-family: inherit; }
+    #slidePreviewContainer { display: flex; flex-wrap: wrap; gap: 10px; }
+
+				@media (max-width: 600px) {
+			.slider-container input[type=range] {
+				width: 70px;
+			}
+		}
+		.main-content {    /* ← フッター高さ60px + 安全マージン */
+	padding-top: 50px;
+  padding-left: 15px;
+  padding-right: 15px;
+	padding-bottom: 80px; /* ← フッター高さ60px + 安全マージン */
+}
+		@media (max-width: 600px) {
+  .option-group, .bg-option-wrapper {
+    flex-wrap: wrap;
+  }
+}
+
+#colorSliderContainer {
+  margin-left: 2px;    /* 原色ボタンの右へ */
+  margin-top: -40px;    /* 上にちょっと浮かせる */
+  position: relative;   /* 親要素に対して位置指定 */
+  top: -4px;            /* 調整用の微ズレ (任意) */
+}
+
+.option-title {
+  width: 100%;
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.option-group {
+  display: flex;
+  gap: 30px;
+  flex-wrap: nowrap;
+}
+
+.bg-option-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
+}
+
+.option {
+	height:50px;
+  flex: none;
+  width: 60px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  border: 1px solid #bbb;
+  cursor: pointer;
+  user-select: none;
+  transition: 0.2s;
+  font-size: 0.85rem;
+  background-color: #fff;
+  color: #1c1440;;
+  font-weight: 500;
+	border-radius: 10px; /* ← 今より控えめな丸み（もともと6pxならそのままでもOK） */
+}
+
+.option:hover {
+  background-color: #eee;
+  border-color: #888;
+}
+
+.option input[type="radio"] {
+  display: none;
+}
+
+.option input[type="radio"]:checked + span {
+  background-color: #1c1440;;
+  color: #fff;
+  border-color: #1c1440;;
+  padding: 10px 0;
+  border-radius: 6px;
+  display: inline-block;
+  min-width: 80px;
+}
+
+
+    .slide-preview {
+      width: 135px;
+      height:90px; /* 高さ固定 */
+      font-size: 0.3em;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .slide-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .slide-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .slide-text {
+      width: 60%;
+      font-size: 1em;
+      line-height: 1.3;
+      white-space: pre-wrap;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .slide-number {
+      text-align: center;
+      font-size: 0.7em;
+      margin-top: 4px;
+    }
+
+    .slide-image {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-height: 100px;
+      overflow: hidden;
+    }
+
+    .slide-image img {
+      max-width: 40px;
+      max-height: 40px;
+      object-fit: contain;
+      border: 1px solid #ddd;
+      border-radius: 1px;
+      margin-top: 1px;
+    }
+
+    .slide-image input[type="file"] {
+      font-size: 0.3em;
+      width: 50%;
+      margin-top: 2px;
+    }
+		.remove-image-button {
+  all: unset;
+  position: absolute;
+  top: 0px;
+  right: 0;
+  width: 1rem;
+  height: 1rem;
+  background: #eee;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #1c1440;;
+  cursor: pointer;
+  text-align: center;
+  line-height: 28px;
+  font-family: sans-serif;
+}
+.page-header {
+  background-color: #1c1440;
+  color: white;
+  padding: 10px 16px;
+  text-align: center;
+  margin: 0 -20px 20px -20px; /* 左右padding分を相殺して帯を端まで広げる */
+	position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 999;
+  border-radius: 0; /* 必要なら丸みも調整可能 */
+	will-change: transform;         /* ← iOSなどでのちらつき防止 */
+  backface-visibility: hidden;    /* ← 同上 */
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  letter-spacing: 0.2px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 35px;
+  background-color: #1c1440;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
+	padding-top: -2px;    /* 上の余白 */
+  padding-bottom: 10px; /* 下の余白（必要に応じて調整） */
+	will-change: transform;         /* ← iOSなどでのちらつき防止 */
+  backface-visibility: hidden;    /* ← 同上 */
+}
+
+.bottom-nav button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#submitButton {
+  position: fixed;
+  bottom: 50px; /* ← フッター(高さ60px)の少し上に浮かせる */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101; /* フッターより上に */
+  width: 180px;
+  height: 50px;
+  font-size: 1rem;
+  background-color: #1c1440;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+/* スマホ画面の場合（最大600px）だけ右下に寄せる */
+@media (max-width: 600px) {
+  #submitButton {
+    left: auto;
+    right: 15px;
+    transform: none;
+  }
+}
+
+#submitButton:hover {
+  background-color: #332e5c;
+}
+
+#pdfButton {
+  position: fixed;
+  bottom: 110px; /* submitButton より上に配置 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  width: 120px;
+  height: 50px;
+  font-size: 1rem;
+  background-color: #1c1440;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+#pdfButton:hover {
+  background-color: #332e5c;
+}
+
+.page-header, .bottom-nav {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.delete-button {
+  width: 50px;
+  height: 20px;
+  font-size: 0.75rem;
+  background-color: #1c1440;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  margin: 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.delete-button:hover {
+  background-color: #332e5c;
+}
+
+
+/* スマホ対応 */
+@media (max-width: 600px) {
+  #pdfButton {
+    left: auto;
+    right: 15px;
+    transform: none;
+  }
+}
+
+
+.star {
+  position: absolute;
+  font-size: 1rem;
+  opacity: 0;
+  animation: sparkle 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(1.2);
+  }
+}
+
+.bottom-nav button:hover {
+  color: #ffd700; /* ゴールドに変化とか */
+}
+  </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+</head>
+<body>
+	<header class="page-header">
+		<h2>Marp to Googleスライド</h2>
+	</header>
+	
+<div class="main-content">
+		<input id="filenameInput" type="text" placeholder="ファイル名"
+		style="width: 100%; height: 20px; font-size: 0.75em; font-family: 'Note Sans JP', 'Noto Sans JP', 'Segoe UI', sans-serif;
+					 box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 0; color: #000; font-weight: normal; margin: 0 0 8px 0;" />
+			
+		<!-- Markdown -->
+		<textarea id="markdown" placeholder="ここにMarpを貼ってください" oninput="updateSlidePreview()"></textarea>
+
+	
+
+
+
+  <!-- 背景色 -->
+  <div class="option-title">背景色：</div>
+  <div class="bg-option-wrapper">
+    <div class="option-group">
+      <label class="option">
+        <input type="radio" name="bgColor" value="white" checked onchange="toggleSlider()">
+        <span>白</span>
+      </label>
+      <label class="option">
+        <input type="radio" name="bgColor" value="pastel" onchange="toggleSlider()">
+        <span>パステル</span>
+      </label>
+      <label class="option">
+        <input type="radio" name="bgColor" value="vivid" onchange="toggleSlider()">
+        <span>原色</span>
+      </label>
+    </div>
+    <div id="colorSliderContainer" class="slider-container">
+      <div class="color-preview">
+        <div id="colorCode" style="font-size: 0.5em;"></div>
+        <div id="colorPreview" style="width: 15px; height: 15px; border: 1px solid #ccc;"></div>
+      </div>
+      <input type="range" id="colorSlider" min="0" max="100" value="50" oninput="updateColorPreview(true)">
+    </div>
+  </div>
+
+  <!-- 文字色 -->
+  <div class="option-title">文字色：</div>
+  <div class="option-group">
+    <label class="option">
+      <input type="radio" name="fontColor" value="#ffffff" onchange="updateSlidePreview()">
+      <span>白</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="fontColor" value="#888888" onchange="updateSlidePreview()">
+      <span>グレー</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="fontColor" value="#000000" checked onchange="updateSlidePreview()">
+      <span>黒</span>
+    </label>
+  </div>
+
+  <!-- 文字のスタイル -->
+  <div class="option-title">文字スタイル：</div>
+  <div class="option-group">
+    <label class="option">
+      <input type="radio" name="fontStyle" value="cool" checked>
+      <span>クール</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="fontStyle" value="normal">
+      <span>標準</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="fontStyle" value="game">
+      <span>ゲーム風</span>
+    </label>
+  </div> 
+
+<button id="pdfButton" onclick="exportSlidesToPDF()">PDF作成</button>
+<button id="submitButton" onclick="submit()">Googleスライド作成</button>
+  <p id="result"></p>
+
+  <br>
+  <div class="option-title">プレビュー：</div>
+    <div id="slidePreviewContainer"></div>
+
+  <br>  <br>
+
+
+
+  <script>
+    const imageUploadMap = {};
+    let currentPreviewBg = '#ffffff';
+
+		window.onload = function () {
+  toggleSlider();
+  updateSlidePreview(); // ← これを必ず呼ぶことで、初期描画される
+};
+
+
+    function getSelectedValue(name) {
+      const radios = document.getElementsByName(name);
+      for (let radio of radios) {
+        if (radio.checked) return radio.value;
+      }
+      return null;
+    }
+
+    function toggleSlider() {
+      const bg = getSelectedValue("bgColor");
+      document.getElementById("colorSliderContainer").style.display =
+        (bg === "pastel" || bg === "vivid") ? "flex" : "none";
+      updateColorPreview(true);
+    }
+
+    function updateColorPreview(applyToPreview = false) {
+      const value = parseInt(document.getElementById("colorSlider").value, 10);
+      const bg = getSelectedValue("bgColor");
+      let color = "#ffffff";
+      if (bg === "pastel") color = computeFixedPastel(value);
+      else if (bg === "vivid") color = computeFixedVivid(value);
+      document.getElementById("colorPreview").style.backgroundColor = color;
+      document.getElementById("colorCode").textContent = color;
+      currentPreviewBg = color;
+
+      if (applyToPreview) {
+        document.querySelectorAll(".slide-preview").forEach(p => {
+          p.style.backgroundColor = currentPreviewBg;
+        });
+      }
+    }
+
+    function computeFixedPastel(val) {
+      const r = 200 + Math.floor(val / 5) % 55;
+      const g = 180 + Math.floor(val * 1.3) % 55;
+      const b = 210 + Math.floor(val * 0.7) % 45;
+      return rgbToHex(r, g, b);
+    }
+
+    function computeFixedVivid(val) {
+      const h = Math.floor(val * 3.6), s = 100, l = 30;
+      return hslToHex(h, s, l);
+    }
+
+    function hslToHex(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return rgbToHex(f(0)*255, f(8)*255, f(4)*255);
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const hex = Math.round(x).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("");
+    }
+
+    function handleImageUploadForSlide(event, slideNumber) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        imageUploadMap[slideNumber] = {
+          src: e.target.result,
+          name: file.name
+        };
+        updateSlidePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateSlidePreview() {
+      const markdown = document.getElementById("markdown").value;
+      const fontColor = getSelectedValue("fontColor");
+      const rawSlides = markdown.split(/^---$/m);
+      const container = document.getElementById("slidePreviewContainer");
+      container.innerHTML = "";
+
+      rawSlides.forEach((text, i) => {
+        const lines = text.trim().split("\n");
+        const pageNum = i + 1;
+
+        const slideDiv = document.createElement("div");
+        slideDiv.className = "slide-preview";
+        slideDiv.style.backgroundColor = currentPreviewBg;
+
+        const titleDiv = document.createElement("div");
+        titleDiv.className = "slide-title";
+        titleDiv.textContent = lines[0] || '(タイトルなし)';
+        titleDiv.style.color = fontColor;
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "slide-content";
+
+        const bodyDiv = document.createElement("div");
+        bodyDiv.className = "slide-text";
+        bodyDiv.textContent = lines.slice(1).join("\n");
+        bodyDiv.style.color = fontColor;
+
+        const imageDiv = document.createElement("div");
+        imageDiv.className = "slide-image";
+
+        if (imageUploadMap[pageNum]) {
+          const img = document.createElement("img");
+          img.src = imageUploadMap[pageNum].src;
+          imageDiv.appendChild(img);
+        }
+
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = "image/*";
+        fileInput.onchange = (e) => handleImageUploadForSlide(e, pageNum);
+        imageDiv.appendChild(fileInput);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "remove-image-button";
+        deleteBtn.textContent = "🗑";
+        deleteBtn.onclick = () => {
+          delete imageUploadMap[pageNum];
+          updateSlidePreview();
+        };
+        imageDiv.appendChild(deleteBtn);
+
+        contentDiv.appendChild(bodyDiv);
+        contentDiv.appendChild(imageDiv);
+        slideDiv.appendChild(titleDiv);
+        slideDiv.appendChild(contentDiv);
+
+        const label = document.createElement("div");
+        label.className = "slide-number";
+        label.textContent = pageNum;
+        slideDiv.appendChild(label);
+
+        container.appendChild(slideDiv);
+      });
+    }
+
+		function submit() {
+  const markdown = document.getElementById("markdown").value;
+  const rawSlides = markdown.split(/^---$/m);
+  const pageCount = rawSlides.length; // ← ★ここで事前に定義しておく！
+
+  const bgColorOption = getSelectedValue("bgColor");
+  const fontColor = getSelectedValue("fontColor");
+  const fontStyle = getSelectedValue("fontStyle");
+  const sliderValue = parseInt(document.getElementById("colorSlider").value, 10);
+
+  const images = [];
+  for (const key in imageUploadMap) {
+    images.push({
+      data: imageUploadMap[key].src.split(",")[1],
+      name: imageUploadMap[key].name,
+      page: parseInt(key)
+    });
+  }
+
+  const settings = {
+    markdown,
+    bgColorOption,
+    fontStyle,
+    fontColor,
+    colorSliderValue: sliderValue,
+    images
+  };
+
+  document.getElementById("result").innerText = "変換中...";
+
+  google.script.run.withSuccessHandler(url => {
+    document.getElementById("result").innerHTML =
+      `スライドが作成されました：<a id="slideLink" href="${url}" target="_blank">こちら</a>`;
+
+    // ⭐ アニメーション
+    const button = document.getElementById("submitButton");
+    const rect = button.getBoundingClientRect();
+    for (let i = 0; i < 7; i++) {
+      const star = document.createElement("div");
+      star.textContent = "⭐";
+      star.className = "star";
+      star.style.left = `${rect.left + rect.width / 2 + window.scrollX + (Math.random() * 40 - 20)}px`;
+      star.style.top = `${rect.top + window.scrollY}px`;
+      star.style.animationDelay = `${i * 0.1}s`;
+      document.body.appendChild(star);
+      setTimeout(() => star.remove(), 1200);
+    }
+
+		const title = document.getElementById("filenameInput").value.trim() || "Marpスライド";
+		saveToHistory(title, url, pageCount);
+
+  }).convertMarkdownWithImages(settings);
+}
+
+	  const slideHistoryKey = 'slideHistory';
+
+  function saveToHistory(title, url, slideCount) {
+    const history = JSON.parse(localStorage.getItem(slideHistoryKey) || '[]');
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}-${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+    history.unshift({ title, url, timestamp, slideCount });
+    localStorage.setItem(slideHistoryKey, JSON.stringify(history.slice(0, 50)));
+  }
+
+  function showMySlides() {
+    document.querySelector('.main-content').style.display = 'none';
+    document.getElementById('historyPage').style.display = 'block';
+    renderHistoryTable();
+  }
+
+  function showHome() {
+    document.querySelector('.main-content').style.display = 'block';
+    document.getElementById('historyPage').style.display = 'none';
+  }
+
+	function renderHistoryTable() {
+  const history = JSON.parse(localStorage.getItem(slideHistoryKey) || '[]');
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = '';
+
+  history.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 4px; border: 1px solid #ccc; text-align: center; width: 40px;">
+        <input type="checkbox">
+      </td>
+      <td style="padding: 4px; border: 1px solid #ccc;">
+        <a href="${item.url}" target="_blank" style="color:#1c1440; text-decoration: underline;">${item.title}</a>
+      </td>
+      <td style="padding: 4px; border: 1px solid #ccc;">${item.timestamp}</td>
+      <td style="padding: 4px; border: 1px solid #ccc;">${item.slideCount}枚</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+	function deleteSelected() {
+  const checkboxes = document.querySelectorAll('#historyTable tbody input[type="checkbox"]');
+  const history = JSON.parse(localStorage.getItem(slideHistoryKey) || '[]');
+  const newHistory = [];
+
+  checkboxes.forEach((checkbox, i) => {
+    if (!checkbox.checked) {
+      newHistory.push(history[i]);
+    }
+  });
+
+  localStorage.setItem(slideHistoryKey, JSON.stringify(newHistory));
+  renderHistoryTable();
+}
+
+function deleteAll() {
+  if (confirm("すべての履歴を削除してもよいですか？")) {
+    localStorage.removeItem(slideHistoryKey);
+    renderHistoryTable();
+  }
+}
+
+function exportSlidesToPDF() {
+  const container = document.getElementById("slidePreviewContainer");
+  if (!container || container.children.length === 0) {
+    alert("スライドがありません");
+    return;
+  }
+
+  const opt = {
+    margin:       0.5,
+    filename:     'slides.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(container).set(opt).save();
+}
+
+  </script>
+	</div>
+
+	<!-- My Slidesページ -->
+<div id="historyPage" style="display:none; padding: 16px; min-height: 100vh;">
+
+  <!-- タイトルと削除ボタン -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
+    <h3 style="color:#1c1440; margin: 0;">My Slides</h3>
+    <div>
+      <button onclick="deleteSelected()" class="delete-button">削除</button>
+      <button onclick="deleteAll()" class="delete-button">全削除</button>
+    </div>
+  </div>
+
+
+    <!-- 履歴テーブル -->
+		<table id="historyTable" style="width:100%; font-size:0.9rem; border-collapse: collapse; border: 1px solid #ccc; margin-top: 12px;">
+			<thead>
+				<tr style="background:#eee;">
+					<th style="padding: 4px; border-bottom: 1px solid #ccc; width: 40px;"></th>
+					<th style="padding: 4px; border-bottom: 1px solid #ccc; text-align: left;">ファイル名</th>
+					<th style="padding: 4px; border-bottom: 1px solid #ccc; text-align: left;">作成日時</th>
+					<th style="padding: 4px; border-bottom: 1px solid #ccc; text-align: left;">枚数</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+	</div>
+
+	<footer class="bottom-nav">
+		<button onclick="showHome()">🏠 home</button>
+		<button onclick="showMySlides()">🖼️ my slides</button>
+		<button>⚙️ settings</button>
+	</footer>
+</body>
+</html>

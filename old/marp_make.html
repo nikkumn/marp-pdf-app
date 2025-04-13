@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 250px; font-size: 1em; }
+    button { padding: 10px 20px; font-size: 1em; margin-top: 10px; }
+    label { display: block; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Marp を Googleスライドに変換</h2>
+
+  <label>背景色を選択：</label>
+  <label><input type="radio" name="bgColor" value="random" checked> ランダム</label>
+  <label><input type="radio" name="bgColor" value="pastel"> パステル</label>
+  <label><input type="radio" name="bgColor" value="custom"> カスタム色：<input type="color" id="customColor" value="#ffffff"></label>
+
+  <label>文字スタイルを選択：</label>
+  <label><input type="radio" name="fontStyle" value="cool" checked> クール</label>
+  <label><input type="radio" name="fontStyle" value="cute"> カワイイ</label>
+  <label><input type="radio" name="fontStyle" value="game"> ゲームっぽい</label>
+
+  <label for="markdown">Markdown入力：</label>
+  <textarea id="markdown" placeholder="ここにMarp形式のMarkdownを入力してください"></textarea>
+  <br>
+  <button onclick="submit()">Googleスライドを作成</button>
+
+  <p id="result"></p>
+
+  <script>
+    function getSelectedValue(name) {
+      const radios = document.getElementsByName(name);
+      for (let i = 0; i < radios.length; i++) {
+        if (radios[i].checked) return radios[i].value;
+      }
+      return null;
+    }
+
+    function submit() {
+      const md = document.getElementById("markdown").value;
+      const bgColorOption = getSelectedValue("bgColor");
+      const customColor = document.getElementById("customColor").value;
+      const fontStyle = getSelectedValue("fontStyle");
+
+      const settings = {
+        markdown: md,
+        bgColorOption,
+        customColor,
+        fontStyle
+      };
+
+      document.getElementById("result").innerText = "変換中...";
+
+      google.script.run.withSuccessHandler(function(url) {
+        document.getElementById("result").innerHTML =
+          `スライドが作成されました：<a href="${url}" target="_blank">こちら</a>`;
+      }).convertMarkdownWithStyle(settings);
+    }
+  </script>
+</body>
+</html>
