@@ -1,7 +1,7 @@
 {
   "name": "Marp PDF Maker",
   "short_name": "MarpPDF",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1c1440",
   "theme_color": "#1c1440",
